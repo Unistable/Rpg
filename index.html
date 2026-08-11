@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top-Down Strategy Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+            color: #eee;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* UI Overlay */
+        .ui-panel {
+            position: absolute;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid #4a4a6a;
+            border-radius: 8px;
+            padding: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        #top-bar {
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
+
+        #left-panel {
+            top: 70px;
+            left: 10px;
+            width: 280px;
+        }
+
+        #right-panel {
+            top: 70px;
+            right: 10px;
+            width: 300px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        #bottom-bar {
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        h3 {
+            font-size: 14px;
+            color: #7a7aaa;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4a4a6a, #3a3a5a);
+            border: 1px solid #5a5a7a;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #5a5a7a, #4a4a6a);
+            transform: translateY(-1px);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, #6a4a7a, #5a3a6a);
+            border-color: #7a5a8a;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #7a4a4a, #6a3a3a);
+            border-color: #8a5a5a;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #8a5a5a, #7a4a4a);
+        }
+
+        .property-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .property-label {
+            color: #aaa;
+        }
+
+        .property-value {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        select, input[type="range"], input[type="number"] {
+            background: #2a2a4a;
+            border: 1px solid #4a4a6a;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #6a6a8a;
+        }
+
+        input[type="range"] {
+            width: 100px;
+        }
+
+        .mode-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .mode-command {
+            background: #4a6a4a;
+            color: #fff;
+        }
+
+        .mode-edit {
+            background: #6a4a6a;
+            color: #fff;
+        }
+
+        #fps-counter {
+            font-family: monospace;
+            font-size: 12px;
+            color: #6a6a8a;
+        }
+
+        #messages {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .message {
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid #4a4a6a;
+            border-radius: 4px;
+            padding: 8px 16px;
+            margin-bottom: 4px;
+            font-size: 12px;
+            animation: fadeInOut 3s forwards;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(10px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+
+        .stat-bar {
+            width: 100%;
+            height: 6px;
+            background: #2a2a4a;
+            border-radius: 3px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .stat-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .hp-fill {
+            background: linear-gradient(90deg, #6a4a4a, #8a5a5a);
+        }
+
+        .capacity-fill {
+            background: linear-gradient(90deg, #4a6a4a, #5a7a5a);
+        }
+
+        #minimap-container {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 200px;
+            height: 150px;
+            border: 2px solid #4a4a6a;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(26, 26, 46, 0.9);
+        }
+
+        #minimap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid #4a4a6a;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 250px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Top Bar -->
+        <div id="top-bar" class="ui-panel">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h2 style="font-size: 18px; color: #fff;">🎮 NavGraph Strategy</h2>
+                <span id="mode-display" class="mode-indicator mode-command">Command Mode</span>
+                <span id="fps-counter">FPS: 60</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" id="btn-undo" title="Ctrl+Z">↶ Undo</button>
+                <button class="btn" id="btn-redo" title="Ctrl+Y">↷ Redo</button>
+                <button class="btn" id="btn-save">💾 Save</button>
+                <button class="btn" id="btn-load">📂 Load</button>
+                <button class="btn btn-danger" id="btn-clear">🗑 Clear All</button>
+            </div>
+        </div>
+
+        <!-- Left Panel - Tools -->
+        <div id="left-panel" class="ui-panel">
+            <h3>🛠 Tools</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="btn active" id="tool-select" data-tool="select">👆 Select (V)</button>
+                <button class="btn" id="tool-create" data-tool="create">➕ Create Node (N)</button>
+                <button class="btn" id="tool-connect" data-tool="connect">🔗 Connect (L)</button>
+                <button class="btn" id="tool-delete" data-tool="delete">❌ Delete (Del)</button>
+                <button class="btn" id="tool-move" data-tool="move">✋ Move (M)</button>
+            </div>
+            
+            <h3 style="margin-top: 20px;">🎯 Selection</h3>
+            <div class="property-row">
+                <span class="property-label">Selected:</span>
+                <span class="property-value" id="selection-count">0</span>
+            </div>
+            <div class="property-row">
+                <span class="property-label">Type:</span>
+                <span class="property-value" id="selection-type">-</span>
+            </div>
+
+            <h3 style="margin-top: 20px;">⚔️ Units</h3>
+            <div class="property-row">
+                <span class="property-label">Alive:</span>
+                <span class="property-value" id="unit-count">0</span>
+            </div>
+            <div class="property-row">
+                <span class="property-label">Base HP:</span>
+                <span class="property-value" id="base-hp">1000</span>
+            </div>
+            <div class="stat-bar">
+                <div class="stat-fill hp-fill" id="base-hp-bar" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Properties -->
+        <div id="right-panel" class="ui-panel">
+            <h3>📊 Properties</h3>
+            <div id="properties-content">
+                <p style="color: #666; font-size: 12px;">Select a node or edge to view properties</p>
+            </div>
+        </div>
+
+        <!-- Bottom Bar - Mode Switch -->
+        <div id="bottom-bar" class="ui-panel">
+            <button class="btn active" id="mode-command">🎮 Command Mode</button>
+            <button class="btn" id="mode-edit">✏️ Graph Edit Mode</button>
+            <div style="flex: 1;"></div>
+            <button class="btn" id="btn-close-contour" title="Close contour (C)">🔒 Close Contour (C)</button>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages"></div>
+
+        <!-- Minimap -->
+        <div id="minimap-container">
+            <canvas id="minimap"></canvas>
+        </div>
+
+        <!-- Tooltip -->
+        <div id="tooltip" class="tooltip hidden"></div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // ==================== CONSTANTS ====================
+        const EDGE_TYPES = {
+            WALK: { color: 0x4a8a4a, speedMod: 1.0, cost: 1.0, label: 'Walk' },
+            RUN: { color: 0x4a4a8a, speedMod: 1.5, cost: 1.5, label: 'Run' },
+            AMBUSH: { color: 0x8a4a8a, speedMod: 0.8, cost: 2.0, label: 'Ambush' },
+            DEFENCE: { color: 0x8a8a4a, speedMod: 0.7, cost: 1.0, label: 'Defence' }
+        };
+
+        const EDGE_DIRECTIONS = {
+            BIDIRECTIONAL: 'Bidirectional',
+            ONE_WAY: 'One Way'
+        };
+
+        const TOOLS = {
+            SELECT: 'select',
+            CREATE: 'create',
+            CONNECT: 'connect',
+            DELETE: 'delete',
+            MOVE: 'move'
+        };
+
+        const MODES = {
+            COMMAND: 'command',
+            GRAPH_EDIT: 'graph_edit'
+        };
+
+        // ==================== GAME STATE ====================
+        const state = {
+            mode: MODES.COMMAND,
+            tool: TOOLS.SELECT,
+            nodes: new Map(),
+            edges: new Map(),
+            units: [],
+            enemies: [],
+            selectedObjects: new Set(),
+            nodeIdCounter: 0,
+            edgeIdCounter: 0,
+            baseHP: 1000,
+            baseMaxHP: 1000,
+            wave: 0,
+            lastWaveTime: 0,
+            isPaused: false,
+            camera: { x: 0, y: 0, zoom: 1 },
+            undoStack: [],
+            redoStack: [],
+            currentContour: [],
+            hoveredObject: null,
+            draggingNode: null,
+            selectionBox: null,
+            isSelecting: false,
+            selectionStart: null
+        };
+
+        // ==================== THREE.JS SETUP ====================
+        const canvas = document.getElementById('game-canvas');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        const camera = new THREE.OrthographicCamera(
+            -window.innerWidth / 2,
+            window.innerWidth / 2,
+            window.innerHeight / 2,
+            -window.innerHeight / 2,
+            0.1,
+            10000
+        );
+        camera.position.set(0, 0, 100);
+        camera.zoom = 1;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Minimap
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
+        minimapCanvas.width = 200;
+        minimapCanvas.height = 150;
+
+        // ==================== CLASSES ====================
+        class Node {
+            constructor(id, x, y) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.edges = [];
+                this.mesh = null;
+                this.labelMesh = null;
+                this.queuedUnits = [];
+                this.capacity = 20;
+                this.currentUnits = 0;
+            }
+
+            canAcceptUnit() {
+                return this.currentUnits < this.capacity;
+            }
+
+            addUnit(unit) {
+                if (this.canAcceptUnit()) {
+                    this.currentUnits++;
+                    return true;
+                }
+                return false;
+            }
+
+            removeUnit(unit) {
+                this.currentUnits = Math.max(0, this.currentUnits - 1);
+            }
+        }
+
+        class Edge {
+            constructor(id, fromNode, toNode) {
+                this.id = id;
+                this.fromNode = fromNode;
+                this.toNode = toNode;
+                this.type = 'WALK';
+                this.direction = 'BIDIRECTIONAL';
+                this.baseCost = 1.0;
+                this.speedMultiplier = 1.0;
+                this.capacity = 10;
+                this.currentUnits = 0;
+                this.unitsOnEdge = new Map();
+                this.mesh = null;
+                this.arrowMesh = null;
+                this.isBlocked = false;
+            }
+
+            getEffectiveCost() {
+                const typeData = EDGE_TYPES[this.type];
+                return this.baseCost * typeData.cost;
+            }
+
+            getSpeedMultiplier() {
+                const typeData = EDGE_TYPES[this.type];
+                return this.speedMultiplier * typeData.speedMod;
+            }
+
+            canAcceptUnit() {
+                return this.currentUnits < this.capacity && !this.isBlocked;
+            }
+
+            addUnit(unit) {
+                if (this.canAcceptUnit()) {
+                    this.currentUnits++;
+                    this.unitsOnEdge.set(unit.id, unit);
+                    return true;
+                }
+                return false;
+            }
+
+            removeUnit(unit) {
+                this.currentUnits = Math.max(0, this.currentUnits - 1);
+                this.unitsOnEdge.delete(unit.id);
+            }
+
+            getOtherNode(node) {
+                if (node.id === this.fromNode.id) {
+                    return this.toNode;
+                } else if (node.id === this.toNode.id) {
+                    return this.fromNode;
+                }
+                return null;
+            }
+
+            canTraverse(fromNode) {
+                if (this.isBlocked) return false;
+                if (this.direction === 'ONE_WAY' && fromNode.id === this.toNode.id) {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        class Unit {
+            constructor(id, x, y, isEnemy = false) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.targetX = x;
+                this.targetY = y;
+                this.isEnemy = isEnemy;
+                this.hp = isEnemy ? 50 : 100;
+                this.maxHP = this.hp;
+                this.damage = isEnemy ? 10 : 15;
+                this.attackRange = 30;
+                this.attackCooldown = 0;
+                this.attackInterval = isEnemy ? 1.5 : 1.0;
+                this.speed = isEnemy ? 40 : 50;
+                this.path = [];
+                this.currentEdge = null;
+                this.edgeProgress = 0;
+                this.state = 'idle';
+                this.selected = false;
+                this.mesh = null;
+                this.hpBar = null;
+                this.hpBarFill = null;
+                this.behavior = 'NORMAL';
+                this.stealthed = false;
+                this.damageReduction = 0;
+                this.firstStrikeBonus = false;
+                this.lastKnownPosition = { x, y };
+            }
+
+            update(deltaTime) {
+                this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
+
+                if (this.state === 'moving' && this.path.length > 0) {
+                    this.moveAlongPath(deltaTime);
+                } else if (this.state === 'attacking') {
+                    const target = this.findTarget();
+                    if (target && this.getDistanceTo(target) <= this.attackRange) {
+                        if (this.attackCooldown <= 0) {
+                            this.attack(target);
+                        }
+                    } else {
+                        this.state = 'idle';
+                    }
+                }
+            }
+
+            moveAlongPath(deltaTime) {
+                if (this.path.length === 0) {
+                    this.state = 'idle';
+                    return;
+                }
+
+                const targetNode = this.path[0];
+                const dx = targetNode.x - this.x;
+                const dy = targetNode.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 2) {
+                    this.path.shift();
+                    
+                    if (this.currentEdge) {
+                        this.currentEdge.removeUnit(this);
+                        this.currentEdge = null;
+                    }
+                    
+                    if (this.path.length > 0) {
+                        const nextNode = this.path[0];
+                        const edge = this.getEdgeTo(nextNode);
+                        if (edge && edge.canAcceptUnit()) {
+                            edge.addUnit(this);
+                            this.currentEdge = edge;
+                        }
+                    }
+                    return;
+                }
+
+                let speed = this.speed;
+                if (this.currentEdge) {
+                    speed *= this.currentEdge.getSpeedMultiplier();
+                }
+
+                const moveX = (dx / distance) * speed * deltaTime;
+                const moveY = (dy / distance) * speed * deltaTime;
+
+                this.x += moveX;
+                this.y += moveY;
+
+                if (this.currentEdge) {
+                    this.edgeProgress = 1 - (distance / Math.sqrt(
+                        Math.pow(this.currentEdge.toNode.x - this.currentEdge.fromNode.x, 2) +
+                        Math.pow(this.currentEdge.toNode.y - this.currentEdge.fromNode.y, 2)
+                    ));
+                }
+
+                this.updateVisuals();
+            }
+
+            getEdgeTo(targetNode) {
+                for (const edge of this.currentNode?.edges || []) {
+                    const other = edge.getOtherNode(this.currentNode);
+                    if (other && other.id === targetNode.id) {
+                        return edge;
+                    }
+                }
+                return null;
+            }
+
+            moveTo(x, y) {
+                this.targetX = x;
+                this.targetY = y;
+                this.state = 'moving';
+                
+                const nearestNode = this.findNearestNode();
+                if (nearestNode) {
+                    const targetNode = this.findNearestNodeToPoint(x, y);
+                    if (targetNode) {
+                        this.path = findPath(nearestNode, targetNode);
+                        if (this.path.length > 0) {
+                            const firstNode = this.path[0];
+                            const edge = this.getEdgeTo(firstNode);
+                            if (edge) {
+                                edge.addUnit(this);
+                                this.currentEdge = edge;
+                            }
+                        }
+                    }
+                }
+            }
+
+            findNearestNode() {
+                let nearest = null;
+                let minDist = Infinity;
+                for (const node of state.nodes.values()) {
+                    const dist = Math.sqrt((node.x - this.x) ** 2 + (node.y - this.y) ** 2);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = node;
+                    }
+                }
+                this.currentNode = nearest;
+                return nearest;
+            }
+
+            findNearestNodeToPoint(x, y) {
+                let nearest = null;
+                let minDist = Infinity;
+                for (const node of state.nodes.values()) {
+                    const dist = Math.sqrt((node.x - x) ** 2 + (node.y - y) ** 2);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = node;
+                    }
+                }
+                return nearest;
+            }
+
+            findTarget() {
+                const targets = this.isEnemy ? state.units : state.enemies;
+                let nearest = null;
+                let minDist = Infinity;
+                for (const target of targets) {
+                    if (target.hp > 0) {
+                        const dist = this.getDistanceTo(target);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearest = target;
+                        }
+                    }
+                }
+                return nearest;
+            }
+
+            getDistanceTo(other) {
+                return Math.sqrt((this.x - other.x) ** 2 + (this.y - other.y) ** 2);
+            }
+
+            attack(target) {
+                let damage = this.damage;
+                
+                if (!this.isEnemy && this.behavior === 'AMBUSH' && this.firstStrikeBonus) {
+                    damage *= 2;
+                    this.firstStrikeBonus = false;
+                }
+                
+                if (target.isEnemy && this.behavior === 'AMBUSH' && this.stealthed) {
+                    damage *= 1.5;
+                    this.stealthed = false;
+                }
+
+                if (this.isEnemy && target.behavior === 'DEFENCE') {
+                    damage *= (1 - target.damageReduction);
+                }
+
+                target.hp -= damage;
+                this.attackCooldown = this.attackInterval;
+                
+                createDamageNumber(target.x, target.y, Math.round(damage), this.isEnemy);
+
+                if (target.hp <= 0) {
+                    target.die();
+                }
+            }
+
+            die() {
+                if (this.currentEdge) {
+                    this.currentEdge.removeUnit(this);
+                }
+                if (this.currentNode) {
+                    this.currentNode.removeUnit(this);
+                }
+                
+                if (this.isEnemy) {
+                    const index = state.enemies.indexOf(this);
+                    if (index > -1) state.enemies.splice(index, 1);
+                } else {
+                    const index = state.units.indexOf(this);
+                    if (index > -1) state.units.splice(index, 1);
+                }
+
+                if (this.mesh) {
+                    scene.remove(this.mesh);
+                    scene.remove(this.hpBar);
+                    scene.remove(this.hpBarFill);
+                }
+            }
+
+            updateVisuals() {
+                if (this.mesh) {
+                    this.mesh.position.set(this.x, this.y, 0);
+                }
+                if (this.hpBar) {
+                    this.hpBar.position.set(this.x, this.y + 8, 0);
+                    this.hpBarFill.position.set(this.x, this.y + 8, 0);
+                    
+                    const hpPercent = this.hp / this.maxHP;
+                    this.hpBarFill.scale.x = hpPercent;
+                }
+            }
+        }
+
+        // ==================== PATHFINDING (A*) ====================
+        function findPath(startNode, endNode) {
+            if (!startNode || !endNode) return [];
+            if (startNode.id === endNode.id) return [endNode];
+
+            const openSet = new Set([startNode]);
+            const closedSet = new Set();
+            const cameFrom = new Map();
+            const gScore = new Map();
+            const fScore = new Map();
+
+            gScore.set(startNode.id, 0);
+            fScore.set(startNode.id, heuristic(startNode, endNode));
+
+            while (openSet.size > 0) {
+                let current = null;
+                let lowestFScore = Infinity;
+
+                for (const node of openSet) {
+                    const score = fScore.get(node.id) || Infinity;
+                    if (score < lowestFScore) {
+                        lowestFScore = score;
+                        current = node;
+                    }
+                }
+
+                if (!current || current.id === endNode.id) {
+                    return reconstructPath(cameFrom, current || endNode);
+                }
+
+                openSet.delete(current);
+                closedSet.add(current);
+
+                for (const edge of current.edges) {
+                    if (!edge.canTraverse(current)) continue;
+                    if (edge.isBlocked) continue;
+
+                    const neighbor = edge.getOtherNode(current);
+                    if (!neighbor || closedSet.has(neighbor)) continue;
+
+                    const tentativeGScore = (gScore.get(current.id) || 0) + edge.getEffectiveCost();
+
+                    if (tentativeGScore < (gScore.get(neighbor.id) || Infinity)) {
+                        cameFrom.set(neighbor.id, current);
+                        gScore.set(neighbor.id, tentativeGScore);
+                        fScore.set(neighbor.id, tentativeGScore + heuristic(neighbor, endNode));
+                        
+                        if (!openSet.has(neighbor)) {
+                            openSet.add(neighbor);
+                        }
+                    }
+                }
+            }
+
+            return [];
+        }
+
+        function heuristic(a, b) {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        }
+
+        function reconstructPath(cameFrom, current) {
+            const path = [current];
+            while (cameFrom.has(current.id)) {
+                current = cameFrom.get(current.id);
+                path.unshift(current);
+            }
+            return path;
+        }
+
+        // ==================== VISUALS ====================
+        const geometries = {
+            node: new THREE.CircleGeometry(8, 16),
+            unit: new THREE.CircleGeometry(6, 12),
+            enemy: new THREE.BoxGeometry(10, 10, 1),
+            edgeLine: new THREE.BufferGeometry(),
+            selectionBox: new THREE.RingGeometry(9, 10, 32)
+        };
+
+        const materials = {
+            node: new THREE.MeshBasicMaterial({ color: 0x4a6a8a }),
+            nodeHover: new THREE.MeshBasicMaterial({ color: 0x6a8aaa }),
+            nodeSelected: new THREE.MeshBasicMaterial({ color: 0x8a6aaa }),
+            unit: new THREE.MeshBasicMaterial({ color: 0x4a8a4a }),
+            unitSelected: new THREE.MeshBasicMaterial({ color: 0x6aaa6a }),
+            enemy: new THREE.MeshBasicMaterial({ color: 0x8a4a4a }),
+            edge: new THREE.LineBasicMaterial({ color: 0x4a8a4a, linewidth: 2 }),
+            edgeHover: new THREE.LineBasicMaterial({ color: 0x6aaa6a, linewidth: 3 }),
+            edgeSelected: new THREE.LineBasicMaterial({ color: 0x8a6a8a, linewidth: 4 }),
+            ghost: new THREE.LineBasicMaterial({ color: 0x6a6a6a, linewidth: 1, transparent: true, opacity: 0.5 }),
+            selectionBox: new THREE.MeshBasicMaterial({ color: 0x6a8aaa, transparent: true, opacity: 0.3 }),
+            hpBarBg: new THREE.MeshBasicMaterial({ color: 0x2a2a2a }),
+            hpBarFill: new THREE.MeshBasicMaterial({ color: 0x4a8a4a })
+        };
+
+        function createNodeMesh(node) {
+            const mesh = new THREE.Mesh(geometries.node, materials.node.clone());
+            mesh.position.set(node.x, node.y, 1);
+            mesh.userData = { type: 'node', nodeId: node.id };
+            scene.add(mesh);
+            node.mesh = mesh;
+            return mesh;
+        }
+
+        function createEdgeMesh(edge) {
+            const points = [
+                new THREE.Vector3(edge.fromNode.x, edge.fromNode.y, 0),
+                new THREE.Vector3(edge.toNode.x, edge.toNode.y, 0)
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const typeData = EDGE_TYPES[edge.type];
+            const material = new THREE.LineBasicMaterial({ 
+                color: typeData.color, 
+                linewidth: 2,
+                transparent: true,
+                opacity: 0.8
+            });
+            const line = new THREE.Line(geometry, material);
+            line.userData = { type: 'edge', edgeId: edge.id };
+            scene.add(line);
+            edge.mesh = line;
+
+            if (edge.direction === 'ONE_WAY') {
+                const midX = (edge.fromNode.x + edge.toNode.x) / 2;
+                const midY = (edge.fromNode.y + edge.toNode.y) / 2;
+                const angle = Math.atan2(edge.toNode.y - edge.fromNode.y, edge.toNode.x - edge.fromNode.x);
+                
+                const arrowShape = new THREE.Shape();
+                arrowShape.moveTo(0, 0);
+                arrowShape.lineTo(-5, -3);
+                arrowShape.lineTo(-5, 3);
+                arrowShape.lineTo(0, 0);
+                
+                const arrowGeometry = new THREE.ShapeGeometry(arrowShape);
+                const arrowMaterial = new THREE.MeshBasicMaterial({ color: typeData.color });
+                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                arrow.position.set(midX, midY, 2);
+                arrow.rotation.z = angle;
+                scene.add(arrow);
+                edge.arrowMesh = arrow;
+            }
+
+            return line;
+        }
+
+        function createUnitMesh(unit) {
+            const geometry = unit.isEnemy ? geometries.enemy : geometries.unit;
+            const material = unit.isEnemy ? materials.enemy : materials.unit.clone();
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(unit.x, unit.y, 5);
+            mesh.userData = { type: 'unit', unitId: unit.id };
+            scene.add(mesh);
+            unit.mesh = mesh;
+
+            const hpBarBg = new THREE.Mesh(
+                new THREE.PlaneGeometry(20, 3),
+                materials.hpBarBg
+            );
+            hpBarBg.position.set(unit.x, unit.y + 8, 6);
+            scene.add(hpBarBg);
+            unit.hpBar = hpBarBg;
+
+            const hpBarFill = new THREE.Mesh(
+                new THREE.PlaneGeometry(20, 3),
+                materials.hpBarFill.clone()
+            );
+            hpBarFill.position.set(unit.x, unit.y + 8, 7);
+            hpBarFill.scale.x = 1;
+            scene.add(hpBarFill);
+            unit.hpBarFill = hpBarFill;
+
+            unit.updateVisuals();
+        }
+
+        function updateEdgeMesh(edge) {
+            if (!edge.mesh) return;
+            
+            const points = [
+                new THREE.Vector3(edge.fromNode.x, edge.fromNode.y, 0),
+                new THREE.Vector3(edge.toNode.x, edge.toNode.y, 0)
+            ];
+            edge.mesh.geometry.setFromPoints(points);
+            
+            const typeData = EDGE_TYPES[edge.type];
+            edge.mesh.material.color.setHex(typeData.color);
+
+            if (edge.arrowMesh) {
+                scene.remove(edge.arrowMesh);
+                edge.arrowMesh = null;
+            }
+
+            if (edge.direction === 'ONE_WAY') {
+                const midX = (edge.fromNode.x + edge.toNode.x) / 2;
+                const midY = (edge.fromNode.y + edge.toNode.y) / 2;
+                const angle = Math.atan2(edge.toNode.y - edge.fromNode.y, edge.toNode.x - edge.fromNode.x);
+                
+                const arrowShape = new THREE.Shape();
+                arrowShape.moveTo(0, 0);
+                arrowShape.lineTo(-5, -3);
+                arrowShape.lineTo(-5, 3);
+                arrowShape.lineTo(0, 0);
+                
+                const arrowGeometry = new THREE.ShapeGeometry(arrowShape);
+                const arrowMaterial = new THREE.MeshBasicMaterial({ color: typeData.color });
+                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                arrow.position.set(midX, midY, 2);
+                arrow.rotation.z = angle;
+                scene.add(arrow);
+                edge.arrowMesh = arrow;
+            }
+        }
+
+        function removeNodeVisuals(node) {
+            if (node.mesh) {
+                scene.remove(node.mesh);
+                node.mesh = null;
+            }
+        }
+
+        function removeEdgeVisuals(edge) {
+            if (edge.mesh) {
+                scene.remove(edge.mesh);
+                edge.mesh = null;
+            }
+            if (edge.arrowMesh) {
+                scene.remove(edge.arrowMesh);
+                edge.arrowMesh = null;
+            }
+        }
+
+        // ==================== INPUT HANDLING ====================
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function getMousePos(event) {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            
+            const worldX = mouse.x * (window.innerWidth / 2) / camera.zoom - camera.position.x;
+            const worldY = mouse.y * (window.innerHeight / 2) / camera.zoom - camera.position.y;
+            
+            return { x: worldX, y: worldY, intersects };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (state.isPaused) return;
+            
+            const { x, y, intersects } = getMousePos(e);
+
+            if (state.mode === MODES.GRAPH_EDIT) {
+                handleGraphEditMouseDown(e, x, y, intersects);
+            } else {
+                handleCommandModeMouseDown(e, x, y, intersects);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (state.isPaused) return;
+            
+            const { x, y, intersects } = getMousePos(e);
+            handleMouseMove(e, x, y, intersects);
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (state.isPaused) return;
+            
+            const { x, y } = getMousePos(e);
+            handleMouseUp(e, x, y);
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (state.mode === MODES.GRAPH_EDIT && state.tool === TOOLS.MOVE) {
+                const { intersects } = getMousePos(e);
+                for (const intersect of intersects) {
+                    if (intersect.object.userData.type === 'node') {
+                        state.draggingNode = state.nodes.get(intersect.object.userData.nodeId);
+                        return;
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('dblclick', (e) => {
+            if (state.mode !== MODES.GRAPH_EDIT) return;
+            
+            const { intersects } = getMousePos(e);
+            for (const intersect of intersects) {
+                if (intersect.object.userData.type === 'edge') {
+                    splitEdge(intersect.object.userData.edgeId);
+                    return;
+                }
+            }
+        });
+
+        function handleGraphEditMouseDown(e, x, y, intersects) {
+            const clickedObject = intersects.find(i => 
+                i.object.userData.type === 'node' || i.object.userData.type === 'edge'
+            );
+
+            if (e.button === 0) {
+                if (state.tool === TOOLS.SELECT) {
+                    if (clickedObject) {
+                        const obj = state.nodes.get(clickedObject.object.userData.nodeId) || 
+                                   state.edges.get(clickedObject.object.userData.edgeId);
+                        if (obj) {
+                            if (e.shiftKey || e.ctrlKey) {
+                                state.selectedObjects.add(obj);
+                            } else {
+                                if (!state.selectedObjects.has(obj)) {
+                                    state.selectedObjects.clear();
+                                    state.selectedObjects.add(obj);
+                                }
+                            }
+                            updateSelectionUI();
+                        }
+                    } else {
+                        if (!e.shiftKey && !e.ctrlKey) {
+                            state.selectedObjects.clear();
+                            updateSelectionUI();
+                        }
+                        state.isSelecting = true;
+                        state.selectionStart = { x, y };
+                    }
+                } else if (state.tool === TOOLS.CREATE) {
+                    if (!clickedObject || clickedObject.object.userData.type !== 'node') {
+                        createNode(x, y);
+                    }
+                } else if (state.tool === TOOLS.CONNECT) {
+                    if (clickedObject && clickedObject.object.userData.type === 'node') {
+                        const node = state.nodes.get(clickedObject.object.userData.nodeId);
+                        if (state.currentContour.length === 0) {
+                            state.currentContour.push(node);
+                        } else {
+                            const lastNode = state.currentContour[state.currentContour.length - 1];
+                            if (lastNode.id !== node.id) {
+                                createEdge(lastNode, node);
+                                state.currentContour.push(node);
+                            }
+                        }
+                    }
+                } else if (state.tool === TOOLS.DELETE) {
+                    if (clickedObject) {
+                        if (clickedObject.object.userData.type === 'node') {
+                            deleteNode(clickedObject.object.userData.nodeId);
+                        } else if (clickedObject.object.userData.type === 'edge') {
+                            deleteEdge(clickedObject.object.userData.edgeId);
+                        }
+                    }
+                } else if (state.tool === TOOLS.MOVE) {
+                    if (clickedObject && clickedObject.object.userData.type === 'node') {
+                        state.draggingNode = state.nodes.get(clickedObject.object.userData.nodeId);
+                    }
+                }
+            }
+        }
+
+        function handleCommandModeMouseDown(e, x, y, intersects) {
+            if (e.button === 0) {
+                const clickedUnit = intersects.find(i => 
+                    i.object.userData.type === 'unit' && 
+                    state.units.some(u => u.id === i.object.userData.unitId)
+                );
+
+                if (clickedUnit) {
+                    const unit = state.units.find(u => u.id === clickedUnit.object.userData.unitId);
+                    if (unit) {
+                        if (e.shiftKey || e.ctrlKey) {
+                            unit.selected = true;
+                        } else {
+                            if (!unit.selected) {
+                                state.units.forEach(u => u.selected = false);
+                                unit.selected = true;
+                            }
+                        }
+                        updateSelectionUI();
+                    }
+                } else {
+                    if (!e.shiftKey && !e.ctrlKey) {
+                        state.units.forEach(u => u.selected = false);
+                        updateSelectionUI();
+                    }
+                    state.isSelecting = true;
+                    state.selectionStart = { x, y };
+                }
+            } else if (e.button === 2) {
+                const selectedUnits = state.units.filter(u => u.selected);
+                if (selectedUnits.length > 0) {
+                    selectedUnits.forEach(unit => {
+                        unit.moveTo(x, y);
+                    });
+                    showMessage(`Ordered ${selectedUnits.length} unit(s) to move`);
+                }
+            }
+        }
+
+        function handleMouseMove(e, x, y, intersects) {
+            if (state.draggingNode) {
+                state.draggingNode.x = x;
+                state.draggingNode.y = y;
+                state.draggingNode.mesh.position.set(x, y, 1);
+                
+                for (const edge of state.draggingNode.edges) {
+                    updateEdgeMesh(edge);
+                }
+                return;
+            }
+
+            if (state.isSelecting) {
+                state.selectionBox = {
+                    x: Math.min(state.selectionStart.x, x),
+                    y: Math.min(state.selectionStart.y, y),
+                    width: Math.abs(x - state.selectionStart.x),
+                    height: Math.abs(y - state.selectionStart.y)
+                };
+            }
+
+            const hoveredObject = intersects.find(i => 
+                i.object.userData.type === 'node' || 
+                i.object.userData.type === 'edge' ||
+                i.object.userData.type === 'unit'
+            );
+
+            if (hoveredObject) {
+                state.hoveredObject = hoveredObject.object;
+            } else {
+                state.hoveredObject = null;
+            }
+        }
+
+        function handleMouseUp(e, x, y) {
+            if (state.draggingNode) {
+                pushUndoState();
+                state.draggingNode = null;
+            }
+
+            if (state.isSelecting && state.selectionBox) {
+                selectInBox(state.selectionBox);
+                state.isSelecting = false;
+                state.selectionBox = null;
+                state.selectionStart = null;
+            }
+        }
+
+        function selectInBox(box) {
+            if (state.mode === MODES.GRAPH_EDIT) {
+                for (const node of state.nodes.values()) {
+                    if (node.x >= box.x && node.x <= box.x + box.width &&
+                        node.y >= box.y && node.y <= box.y + box.height) {
+                        state.selectedObjects.add(node);
+                    }
+                }
+            } else {
+                for (const unit of state.units) {
+                    if (unit.x >= box.x && unit.x <= box.x + box.width &&
+                        unit.y >= box.y && unit.y <= box.y + box.height) {
+                        unit.selected = true;
+                    }
+                }
+            }
+            updateSelectionUI();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                state.selectedObjects.clear();
+                state.units.forEach(u => u.selected = false);
+                state.currentContour = [];
+                updateSelectionUI();
+            }
+
+            if (e.key === 'v' || e.key === 'V') setTool(TOOLS.SELECT);
+            if (e.key === 'n' || e.key === 'N') setTool(TOOLS.CREATE);
+            if (e.key === 'l' || e.key === 'L') setTool(TOOLS.CONNECT);
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (state.mode === MODES.GRAPH_EDIT) {
+                    deleteSelected();
+                }
+            }
+            if (e.key === 'm' || e.key === 'M') setTool(TOOLS.MOVE);
+            if (e.key === 'c' || e.key === 'C') closeContour();
+            
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+            if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+
+            if (e.key === '1') setMode(MODES.COMMAND);
+            if (e.key === '2') setMode(MODES.GRAPH_EDIT);
+        });
+
+        // ==================== GRAPH OPERATIONS ====================
+        function createNode(x, y) {
+            pushUndoState();
+            const id = state.nodeIdCounter++;
+            const node = new Node(id, x, y);
+            state.nodes.set(id, node);
+            createNodeMesh(node);
+            showMessage(`Created node ${id}`);
+            return node;
+        }
+
+        function createEdge(fromNode, toNode) {
+            const existingEdge = fromNode.edges.find(e => 
+                (e.fromNode === fromNode && e.toNode === toNode) ||
+                (e.fromNode === toNode && e.toNode === fromNode)
+            );
+            
+            if (existingEdge) {
+                showMessage('Edge already exists');
+                return null;
+            }
+
+            pushUndoState();
+            const id = state.edgeIdCounter++;
+            const edge = new Edge(id, fromNode, toNode);
+            state.edges.set(id, edge);
+            fromNode.edges.push(edge);
+            toNode.edges.push(edge);
+            createEdgeMesh(edge);
+            return edge;
+        }
+
+        function deleteNode(nodeId) {
+            const node = state.nodes.get(nodeId);
+            if (!node) return;
+
+            pushUndoState();
+            
+            for (const edge of [...node.edges]) {
+                deleteEdge(edge.id);
+            }
+
+            removeNodeVisuals(node);
+            state.nodes.delete(nodeId);
+            state.selectedObjects.delete(node);
+            showMessage(`Deleted node ${nodeId}`);
+        }
+
+        function deleteEdge(edgeId) {
+            const edge = state.edges.get(edgeId);
+            if (!edge) return;
+
+            pushUndoState();
+
+            edge.fromNode.edges = edge.fromNode.edges.filter(e => e.id !== edgeId);
+            edge.toNode.edges = edge.toNode.edges.filter(e => e.id !== edgeId);
+            
+            for (const unit of [...edge.unitsOnEdge.values()]) {
+                unit.currentEdge = null;
+            }
+            
+            removeEdgeVisuals(edge);
+            state.edges.delete(edgeId);
+            state.selectedObjects.delete(edge);
+        }
+
+        function splitEdge(edgeId) {
+            const edge = state.edges.get(edgeId);
+            if (!edge) return;
+
+            pushUndoState();
+
+            const midX = (edge.fromNode.x + edge.toNode.x) / 2;
+            const midY = (edge.fromNode.y + edge.toNode.y) / 2;
+            
+            const newNode = createNode(midX, midY);
+            
+            deleteEdge(edgeId);
+            
+            createEdge(edge.fromNode, newNode);
+            createEdge(newNode, edge.toNode);
+
+            showMessage('Edge split');
+        }
+
+        function closeContour() {
+            if (state.currentContour.length >= 3) {
+                const firstNode = state.currentContour[0];
+                const lastNode = state.currentContour[state.currentContour.length - 1];
+                if (firstNode.id !== lastNode.id) {
+                    createEdge(lastNode, firstNode);
+                    showMessage('Contour closed');
+                }
+            }
+            state.currentContour = [];
+        }
+
+        function deleteSelected() {
+            for (const obj of [...state.selectedObjects]) {
+                if (obj instanceof Node) {
+                    deleteNode(obj.id);
+                } else if (obj instanceof Edge) {
+                    deleteEdge(obj.id);
+                }
+            }
+            state.selectedObjects.clear();
+            updateSelectionUI();
+        }
+
+        // ==================== UNDO/REDO ====================
+        function pushUndoState() {
+            const graphState = {
+                nodes: Array.from(state.nodes.entries()).map(([id, node]) => ({
+                    id: node.id,
+                    x: node.x,
+                    y: node.y,
+                    capacity: node.capacity
+                })),
+                edges: Array.from(state.edges.entries()).map(([id, edge]) => ({
+                    id: edge.id,
+                    fromNodeId: edge.fromNode.id,
+                    toNodeId: edge.toNode.id,
+                    type: edge.type,
+                    direction: edge.direction,
+                    baseCost: edge.baseCost,
+                    speedMultiplier: edge.speedMultiplier,
+                    capacity: edge.capacity
+                })),
+                nodeIdCounter: state.nodeIdCounter,
+                edgeIdCounter: state.edgeIdCounter
+            };
+
+            state.undoStack.push(JSON.stringify(graphState));
+            state.redoStack = [];
+            
+            if (state.undoStack.length > 50) {
+                state.undoStack.shift();
+            }
+        }
+
+        function undo() {
+            if (state.undoStack.length === 0) return;
+
+            const currentState = JSON.stringify({
+                nodes: Array.from(state.nodes.entries()).map(([id, node]) => ({
+                    id: node.id, x: node.x, y: node.y, capacity: node.capacity
+                })),
+                edges: Array.from(state.edges.entries()).map(([id, edge]) => ({
+                    id: edge.id,
+                    fromNodeId: edge.fromNode.id,
+                    toNodeId: edge.toNode.id,
+                    type: edge.type,
+                    direction: edge.direction,
+                    baseCost: edge.baseCost,
+                    speedMultiplier: edge.speedMultiplier,
+                    capacity: edge.capacity
+                })),
+                nodeIdCounter: state.nodeIdCounter,
+                edgeIdCounter: state.edgeIdCounter
+            });
+
+            state.redoStack.push(currentState);
+
+            const prevState = JSON.parse(state.undoStack.pop());
+            restoreGraphState(prevState);
+            showMessage('Undone');
+        }
+
+        function redo() {
+            if (state.redoStack.length === 0) return;
+
+            const currentState = JSON.stringify({
+                nodes: Array.from(state.nodes.entries()).map(([id, node]) => ({
+                    id: node.id, x: node.x, y: node.y, capacity: node.capacity
+                })),
+                edges: Array.from(state.edges.entries()).map(([id, edge]) => ({
+                    id: edge.id,
+                    fromNodeId: edge.fromNode.id,
+                    toNodeId: edge.toNode.id,
+                    type: edge.type,
+                    direction: edge.direction,
+                    baseCost: edge.baseCost,
+                    speedMultiplier: edge.speedMultiplier,
+                    capacity: edge.capacity
+                })),
+                nodeIdCounter: state.nodeIdCounter,
+                edgeIdCounter: state.edgeIdCounter
+            });
+
+            state.undoStack.push(currentState);
+
+            const nextState = JSON.parse(state.redoStack.pop());
+            restoreGraphState(nextState);
+            showMessage('Redone');
+        }
+
+        function restoreGraphState(graphState) {
+            for (const node of state.nodes.values()) {
+                removeNodeVisuals(node);
+            }
+            for (const edge of state.edges.values()) {
+                removeEdgeVisuals(edge);
+            }
+
+            state.nodes.clear();
+            state.edges.clear();
+            state.selectedObjects.clear();
+
+            for (const nodeData of graphState.nodes) {
+                const node = new Node(nodeData.id, nodeData.x, nodeData.y);
+                node.capacity = nodeData.capacity;
+                state.nodes.set(nodeData.id, node);
+                createNodeMesh(node);
+            }
+
+            for (const edgeData of graphState.edges) {
+                const fromNode = state.nodes.get(edgeData.fromNodeId);
+                const toNode = state.nodes.get(edgeData.toNodeId);
+                if (fromNode && toNode) {
+                    const edge = new Edge(edgeData.id, fromNode, toNode);
+                    edge.type = edgeData.type;
+                    edge.direction = edgeData.direction;
+                    edge.baseCost = edgeData.baseCost;
+                    edge.speedMultiplier = edgeData.speedMultiplier;
+                    edge.capacity = edgeData.capacity;
+                    state.edges.set(edgeData.id, edge);
+                    fromNode.edges.push(edge);
+                    toNode.edges.push(edge);
+                    createEdgeMesh(edge);
+                }
+            }
+
+            state.nodeIdCounter = graphState.nodeIdCounter;
+            state.edgeIdCounter = graphState.edgeIdCounter;
+        }
+
+        // ==================== SAVE/LOAD ====================
+        function saveGame() {
+            const saveData = {
+                graph: {
+                    nodes: Array.from(state.nodes.entries()).map(([id, node]) => ({
+                        id: node.id,
+                        x: node.x,
+                        y: node.y,
+                        capacity: node.capacity
+                    })),
+                    edges: Array.from(state.edges.entries()).map(([id, edge]) => ({
+                        id: edge.id,
+                        fromNodeId: edge.fromNode.id,
+                        toNodeId: edge.toNode.id,
+                        type: edge.type,
+                        direction: edge.direction,
+                        baseCost: edge.baseCost,
+                        speedMultiplier: edge.speedMultiplier,
+                        capacity: edge.capacity
+                    })),
+                    nodeIdCounter: state.nodeIdCounter,
+                    edgeIdCounter: state.edgeIdCounter
+                },
+                baseHP: state.baseHP,
+                wave: state.wave
+            };
+
+            localStorage.setItem('navgraph_strategy_save', JSON.stringify(saveData));
+            showMessage('Game saved');
+        }
+
+        function loadGame() {
+            const saveData = localStorage.getItem('navgraph_strategy_save');
+            if (!saveData) {
+                showMessage('No save found');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(saveData);
+                
+                for (const unit of [...state.units]) {
+                    unit.die();
+                }
+                for (const enemy of [...state.enemies]) {
+                    enemy.die();
+                }
+
+                restoreGraphState(data.graph);
+                state.baseHP = data.baseHP || 1000;
+                state.wave = data.wave || 0;
+
+                updateBaseHPUI();
+                showMessage('Game loaded');
+            } catch (e) {
+                showMessage('Failed to load save');
+                console.error(e);
+            }
+        }
+
+        function clearAll() {
+            pushUndoState();
+
+            for (const unit of [...state.units]) {
+                unit.die();
+            }
+            for (const enemy of [...state.enemies]) {
+                enemy.die();
+            }
+            for (const node of state.nodes.values()) {
+                removeNodeVisuals(node);
+            }
+            for (const edge of state.edges.values()) {
+                removeEdgeVisuals(edge);
+            }
+
+            state.nodes.clear();
+            state.edges.clear();
+            state.selectedObjects.clear();
+            state.currentContour = [];
+            state.nodeIdCounter = 0;
+            state.edgeIdCounter = 0;
+            state.baseHP = 1000;
+
+            updateBaseHPUI();
+            updateSelectionUI();
+            showMessage('All cleared');
+        }
+
+        // ==================== GAME LOGIC ====================
+        function spawnUnit(x, y) {
+            const id = Date.now() + Math.random();
+            const unit = new Unit(id, x, y, false);
+            state.units.push(unit);
+            createUnitMesh(unit);
+            return unit;
+        }
+
+        function spawnEnemy(x, y) {
+            const id = Date.now() + Math.random();
+            const enemy = new Unit(id, x, y, true);
+            state.enemies.push(enemy);
+            createUnitMesh(enemy);
+            return enemy;
+        }
+
+        function spawnWave() {
+            state.wave++;
+            const enemyCount = 3 + state.wave * 2;
+            const spawnPoints = [
+                { x: -400, y: -300 },
+                { x: 400, y: -300 },
+                { x: -400, y: 300 },
+                { x: 400, y: 300 }
+            ];
+
+            for (let i = 0; i < enemyCount; i++) {
+                const spawnPoint = spawnPoints[i % spawnPoints.length];
+                const enemy = spawnEnemy(spawnPoint.x + Math.random() * 100, spawnPoint.y + Math.random() * 100);
+                enemy.moveTo(0, 0);
+            }
+
+            showMessage(`Wave ${state.wave} spawned! (${enemyCount} enemies)`);
+        }
+
+        function updateGameLogic(deltaTime) {
+            for (const unit of state.units) {
+                unit.update(deltaTime);
+            }
+
+            for (const enemy of state.enemies) {
+                enemy.update(deltaTime);
+                
+                const distToBase = Math.sqrt(enemy.x ** 2 + enemy.y ** 2);
+                if (distToBase < 30) {
+                    state.baseHP -= 10;
+                    updateBaseHPUI();
+                    enemy.die();
+                    
+                    if (state.baseHP <= 0) {
+                        gameOver(false);
+                    }
+                }
+            }
+
+            const now = Date.now();
+            if (now - state.lastWaveTime > 30000 && state.units.length > 0) {
+                spawnWave();
+                state.lastWaveTime = now;
+            }
+
+            checkCombat();
+            updateUnitSelectionVisuals();
+        }
+
+        function checkCombat() {
+            for (const unit of state.units) {
+                if (unit.hp <= 0) continue;
+                
+                const target = unit.findTarget();
+                if (target && unit.getDistanceTo(target) <= unit.attackRange) {
+                    unit.state = 'attacking';
+                }
+            }
+
+            for (const enemy of state.enemies) {
+                if (enemy.hp <= 0) continue;
+                
+                const target = enemy.findTarget();
+                if (target && enemy.getDistanceTo(target) <= enemy.attackRange) {
+                    enemy.state = 'attacking';
+                }
+            }
+        }
+
+        function updateUnitSelectionVisuals() {
+            for (const unit of state.units) {
+                if (unit.mesh) {
+                    unit.mesh.material = unit.selected ? materials.unitSelected : materials.unit;
+                }
+            }
+        }
+
+        function updateBaseHPUI() {
+            document.getElementById('base-hp').textContent = Math.max(0, state.baseHP);
+            const percent = (state.baseHP / state.baseMaxHP) * 100;
+            document.getElementById('base-hp-bar').style.width = `${Math.max(0, percent)}%`;
+
+            if (state.baseHP <= 0) {
+                gameOver(false);
+            } else if (state.enemies.length === 0 && state.wave >= 5) {
+                gameOver(true);
+            }
+        }
+
+        function gameOver(victory) {
+            state.isPaused = true;
+            showMessage(victory ? '🎉 VICTORY!' : '💀 DEFEAT!', 10000);
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        function setMode(mode) {
+            state.mode = mode;
+            document.getElementById('mode-command').classList.toggle('active', mode === MODES.COMMAND);
+            document.getElementById('mode-edit').classList.toggle('active', mode === MODES.GRAPH_EDIT);
+            document.getElementById('mode-display').textContent = mode === MODES.COMMAND ? 'Command Mode' : 'Graph Edit Mode';
+            document.getElementById('mode-display').className = `mode-indicator mode-${mode}`;
+            showMessage(`${mode === MODES.COMMAND ? 'Command' : 'Graph Edit'} mode activated`);
+        }
+
+        function setTool(tool) {
+            state.tool = tool;
+            document.querySelectorAll('#left-panel .btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tool === tool);
+            });
+            showMessage(`Tool: ${tool}`);
+        }
+
+        function updateSelectionUI() {
+            const count = state.mode === MODES.GRAPH_EDIT ? state.selectedObjects.size : 
+                          state.units.filter(u => u.selected).length;
+            document.getElementById('selection-count').textContent = count;
+            
+            let type = '-';
+            if (count === 1) {
+                if (state.mode === MODES.GRAPH_EDIT) {
+                    const obj = state.selectedObjects.values().next().value;
+                    type = obj instanceof Node ? 'Node' : 'Edge';
+                } else {
+                    type = 'Unit';
+                }
+            } else if (count > 1) {
+                type = 'Multiple';
+            }
+            document.getElementById('selection-type').textContent = type;
+            document.getElementById('unit-count').textContent = state.units.length;
+
+            updatePropertiesPanel();
+        }
+
+        function updatePropertiesPanel() {
+            const container = document.getElementById('properties-content');
+            
+            if (state.mode === MODES.GRAPH_EDIT && state.selectedObjects.size === 1) {
+                const obj = state.selectedObjects.values().next().value;
+                
+                if (obj instanceof Node) {
+                    container.innerHTML = `
+                        <div class="property-row">
+                            <span class="property-label">ID:</span>
+                            <span class="property-value">${obj.id}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Position:</span>
+                            <span class="property-value">${Math.round(obj.x)}, ${Math.round(obj.y)}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Connections:</span>
+                            <span class="property-value">${obj.edges.length}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Capacity:</span>
+                            <input type="number" value="${obj.capacity}" min="1" max="20" 
+                                   onchange="updateNodeCapacity(${obj.id}, this.value)">
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Current Units:</span>
+                            <span class="property-value">${obj.currentUnits}/${obj.capacity}</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill capacity-fill" style="width: ${(obj.currentUnits / obj.capacity) * 100}%"></div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-danger" onclick="deleteNode(${obj.id})">Delete Node</button>
+                        </div>
+                    `;
+                } else if (obj instanceof Edge) {
+                    const typeData = EDGE_TYPES[obj.type];
+                    container.innerHTML = `
+                        <div class="property-row">
+                            <span class="property-label">ID:</span>
+                            <span class="property-value">${obj.id}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Type:</span>
+                            <select onchange="updateEdgeType(${obj.id}, this.value)">
+                                ${Object.keys(EDGE_TYPES).map(t => 
+                                    `<option value="${t}" ${t === obj.type ? 'selected' : ''}>${EDGE_TYPES[t].label}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Direction:</span>
+                            <select onchange="updateEdgeDirection(${obj.id}, this.value)">
+                                ${Object.keys(EDGE_DIRECTIONS).map(d => 
+                                    `<option value="${d}" ${d === obj.direction ? 'selected' : ''}>${EDGE_DIRECTIONS[d]}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Base Cost:</span>
+                            <input type="number" value="${obj.baseCost}" min="0.1" step="0.1"
+                                   onchange="updateEdgeCost(${obj.id}, this.value)">
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Speed Multiplier:</span>
+                            <input type="range" min="0.1" max="3.0" step="0.1" value="${obj.speedMultiplier}"
+                                   onchange="updateEdgeSpeed(${obj.id}, this.value)">
+                            <span class="property-value">${obj.speedMultiplier.toFixed(1)}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Capacity:</span>
+                            <input type="number" value="${obj.capacity}" min="1" max="20"
+                                   onchange="updateEdgeCapacity(${obj.id}, this.value)">
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Current Units:</span>
+                            <span class="property-value">${obj.currentUnits}/${obj.capacity}</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill capacity-fill" style="width: ${(obj.currentUnits / obj.capacity) * 100}%"></div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-danger" onclick="deleteEdge(${obj.id})">Delete Edge</button>
+                        </div>
+                    `;
+                }
+            } else if (state.mode === MODES.COMMAND) {
+                const selectedUnits = state.units.filter(u => u.selected);
+                if (selectedUnits.length === 1) {
+                    const unit = selectedUnits[0];
+                    container.innerHTML = `
+                        <div class="property-row">
+                            <span class="property-label">HP:</span>
+                            <span class="property-value">${Math.round(unit.hp)}/${unit.maxHP}</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill hp-fill" style="width: ${(unit.hp / unit.maxHP) * 100}%"></div>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Damage:</span>
+                            <span class="property-value">${unit.damage}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Attack Range:</span>
+                            <span class="property-value">${unit.attackRange}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">State:</span>
+                            <span class="property-value">${unit.state}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Behavior:</span>
+                            <select onchange="updateUnitBehavior(${unit.id}, this.value)">
+                                <option value="NORMAL" ${unit.behavior === 'NORMAL' ? 'selected' : ''}>Normal</option>
+                                <option value="AMBUSH" ${unit.behavior === 'AMBUSH' ? 'selected' : ''}>Ambush</option>
+                                <option value="DEFENCE" ${unit.behavior === 'DEFENCE' ? 'selected' : ''}>Defence</option>
+                            </select>
+                        </div>
+                    `;
+                } else if (selectedUnits.length > 1) {
+                    container.innerHTML = `
+                        <div class="property-row">
+                            <span class="property-label">Selected Units:</span>
+                            <span class="property-value">${selectedUnits.length}</span>
+                        </div>
+                        <div class="property-row">
+                            <span class="property-label">Average HP:</span>
+                            <span class="property-value">${Math.round(selectedUnits.reduce((sum, u) => sum + u.hp, 0) / selectedUnits.length)}</span>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<p style="color: #666; font-size: 12px;">Select a node, edge, or unit to view properties</p>';
+                }
+            } else {
+                container.innerHTML = '<p style="color: #666; font-size: 12px;">Select a node or edge to view properties</p>';
+            }
+        }
+
+        window.updateNodeCapacity = function(nodeId, value) {
+            const node = state.nodes.get(nodeId);
+            if (node) {
+                pushUndoState();
+                node.capacity = parseInt(value);
+                updatePropertiesPanel();
+            }
+        };
+
+        window.updateEdgeType = function(edgeId, value) {
+            const edge = state.edges.get(edgeId);
+            if (edge) {
+                pushUndoState();
+                edge.type = value;
+                updateEdgeMesh(edge);
+                updatePropertiesPanel();
+            }
+        };
+
+        window.updateEdgeDirection = function(edgeId, value) {
+            const edge = state.edges.get(edgeId);
+            if (edge) {
+                pushUndoState();
+                edge.direction = value;
+                updateEdgeMesh(edge);
+                updatePropertiesPanel();
+            }
+        };
+
+        window.updateEdgeCost = function(edgeId, value) {
+            const edge = state.edges.get(edgeId);
+            if (edge) {
+                pushUndoState();
+                edge.baseCost = parseFloat(value);
+                updatePropertiesPanel();
+            }
+        };
+
+        window.updateEdgeSpeed = function(edgeId, value) {
+            const edge = state.edges.get(edgeId);
+            if (edge) {
+                pushUndoState();
+                edge.speedMultiplier = parseFloat(value);
+                updatePropertiesPanel();
+            }
+        };
+
+        window.updateEdgeCapacity = function(edgeId, value) {
+            const edge = state.edges.get(edgeId);
+            if (edge) {
+                pushUndoState();
+                edge.capacity = parseInt(value);
+                updatePropertiesPanel();
+            }
+        };
+
+        window.updateUnitBehavior = function(unitId, value) {
+            const unit = state.units.find(u => u.id === unitId);
+            if (unit) {
+                unit.behavior = value;
+                if (value === 'AMBUSH') {
+                    unit.stealthed = true;
+                    unit.firstStrikeBonus = true;
+                } else if (value === 'DEFENCE') {
+                    unit.damageReduction = 0.25;
+                } else {
+                    unit.stealthed = false;
+                    unit.firstStrikeBonus = false;
+                    unit.damageReduction = 0;
+                }
+                updatePropertiesPanel();
+            }
+        };
+
+        window.deleteNode = function(nodeId) {
+            deleteNode(nodeId);
+            updatePropertiesPanel();
+        };
+
+        window.deleteEdge = function(edgeId) {
+            deleteEdge(edgeId);
+            updatePropertiesPanel();
+        };
+
+        function showMessage(text, duration = 3000) {
+            const container = document.getElementById('messages');
+            const message = document.createElement('div');
+            message.className = 'message';
+            message.textContent = text;
+            container.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, duration);
+        }
+
+        const damageNumbers = [];
+        function createDamageNumber(x, y, damage, isEnemy) {
+            damageNumbers.push({
+                x, y, damage, 
+                life: 1.0,
+                color: isEnemy ? '#ff4a4a' : '#4aff4a'
+            });
+        }
+
+        // ==================== RENDERING ====================
+        let lastTime = 0;
+        let frameCount = 0;
+        let fpsTime = 0;
+
+        function render(currentTime) {
+            requestAnimationFrame(render);
+
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            if (!state.isPaused) {
+                updateGameLogic(deltaTime);
+            }
+
+            renderScene();
+            renderMinimap();
+            renderDamageNumbers(deltaTime);
+            updateFPS(currentTime);
+        }
+
+        function renderScene() {
+            renderer.render(scene, camera);
+        }
+
+        function renderMinimap() {
+            minimapCtx.fillStyle = '#1a1a2e';
+            minimapCtx.fillRect(0, 0, 200, 150);
+
+            const scale = 0.2;
+            const offsetX = 100;
+            const offsetY = 75;
+
+            for (const edge of state.edges.values()) {
+                const typeData = EDGE_TYPES[edge.type];
+                minimapCtx.strokeStyle = `#${typeData.color.toString(16).padStart(6, '0')}`;
+                minimapCtx.lineWidth = 1;
+                minimapCtx.beginPath();
+                minimapCtx.moveTo(edge.fromNode.x * scale + offsetX, -edge.fromNode.y * scale + offsetY);
+                minimapCtx.lineTo(edge.toNode.x * scale + offsetX, -edge.toNode.y * scale + offsetY);
+                minimapCtx.stroke();
+            }
+
+            for (const node of state.nodes.values()) {
+                minimapCtx.fillStyle = '#4a6a8a';
+                minimapCtx.beginPath();
+                minimapCtx.arc(node.x * scale + offsetX, -node.y * scale + offsetY, 3, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+
+            for (const unit of state.units) {
+                minimapCtx.fillStyle = '#4a8a4a';
+                minimapCtx.beginPath();
+                minimapCtx.arc(unit.x * scale + offsetX, -unit.y * scale + offsetY, 2, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+
+            for (const enemy of state.enemies) {
+                minimapCtx.fillStyle = '#8a4a4a';
+                minimapCtx.beginPath();
+                minimapCtx.arc(enemy.x * scale + offsetX, -enemy.y * scale + offsetY, 2, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+
+            minimapCtx.strokeStyle = '#6a6a8a';
+            minimapCtx.lineWidth = 1;
+            minimapCtx.strokeRect(
+                -camera.position.x * scale - (window.innerWidth / 2 / camera.zoom) * scale + offsetX,
+                camera.position.y * scale - (window.innerHeight / 2 / camera.zoom) * scale + offsetY,
+                (window.innerWidth / camera.zoom) * scale,
+                (window.innerHeight / camera.zoom) * scale
+            );
+        }
+
+        function renderDamageNumbers(deltaTime) {
+            for (let i = damageNumbers.length - 1; i >= 0; i--) {
+                const dn = damageNumbers[i];
+                dn.life -= deltaTime;
+                dn.y += 20 * deltaTime;
+                
+                if (dn.life <= 0) {
+                    damageNumbers.splice(i, 1);
+                    continue;
+                }
+
+                const screenX = (dn.x - camera.position.x) / camera.zoom + window.innerWidth / 2;
+                const screenY = (-dn.y - camera.position.y) / camera.zoom + window.innerHeight / 2;
+
+                minimapCtx.save();
+                minimapCtx.globalAlpha = dn.life;
+                minimapCtx.fillStyle = dn.color;
+                minimapCtx.font = 'bold 12px Arial';
+                minimapCtx.fillText(dn.damage.toString(), screenX, screenY);
+                minimapCtx.restore();
+            }
+        }
+
+        function updateFPS(currentTime) {
+            frameCount++;
+            if (currentTime - fpsTime >= 1000) {
+                document.getElementById('fps-counter').textContent = `FPS: ${frameCount}`;
+                frameCount = 0;
+                fpsTime = currentTime;
+            }
+        }
+
+        // ==================== INITIALIZATION ====================
+        function init() {
+            document.getElementById('mode-command').addEventListener('click', () => setMode(MODES.COMMAND));
+            document.getElementById('mode-edit').addEventListener('click', () => setMode(MODES.GRAPH_EDIT));
+            document.getElementById('btn-close-contour').addEventListener('click', closeContour);
+            document.getElementById('btn-undo').addEventListener('click', undo);
+            document.getElementById('btn-redo').addEventListener('click', redo);
+            document.getElementById('btn-save').addEventListener('click', saveGame);
+            document.getElementById('btn-load').addEventListener('click', loadGame);
+            document.getElementById('btn-clear').addEventListener('click', clearAll);
+
+            document.querySelectorAll('#left-panel .btn[data-tool]').forEach(btn => {
+                btn.addEventListener('click', () => setTool(btn.dataset.tool));
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.left = -window.innerWidth / 2;
+                camera.right = window.innerWidth / 2;
+                camera.top = window.innerHeight / 2;
+                camera.bottom = -window.innerHeight / 2;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            spawnUnit(-50, 0);
+            spawnUnit(-70, 20);
+            spawnUnit(-70, -20);
+
+            setMode(MODES.GRAPH_EDIT);
+            setTool(TOOLS.CREATE);
+
+            showMessage('Welcome! Start by creating nodes (N) and connecting them (L)');
+
+            requestAnimationFrame(render);
+        }
+
+        init();
+    </script>
+</body>
+</html>
