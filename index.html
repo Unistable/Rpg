@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D RPG - Navigation Graph System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+
+        #game-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: #16213e;
+            overflow: hidden;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #ui-panel {
+            width: 320px;
+            background: #0f3460;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #e94560;
+        }
+
+        h2 {
+            color: #e94560;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        h3 {
+            color: #fff;
+            margin: 15px 0 10px 0;
+            font-size: 14px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #1a1a2e;
+            border-radius: 8px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #ff6b6b;
+        }
+
+        .btn-secondary {
+            background: #4a69bd;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #6a89cc;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px 0;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        select, input[type="range"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #4a69bd;
+            border-radius: 4px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: 20px;
+        }
+
+        .edge-type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .edge-type-btn {
+            padding: 8px;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .edge-type-btn.walk {
+            background: #27ae60;
+            color: white;
+        }
+
+        .edge-type-btn.run {
+            background: #e67e22;
+            color: white;
+        }
+
+        .edge-type-btn.ambush {
+            background: #8e44ad;
+            color: white;
+        }
+
+        .edge-type-btn.defence {
+            background: #2980b9;
+            color: white;
+        }
+
+        .edge-type-btn.active {
+            border-color: #fff;
+            transform: scale(1.05);
+        }
+
+        .info-panel {
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .legend {
+            margin-top: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 11px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            margin-right: 10px;
+        }
+
+        .stats {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+            border: 1px solid #e94560;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="canvas-container">
+            <canvas id="game-canvas"></canvas>
+            <div id="tooltip"></div>
+        </div>
+        <div id="ui-panel">
+            <h2>🎮 Navigation Graph Editor</h2>
+            
+            <div class="control-group">
+                <h3>Controls</h3>
+                <div class="info-panel">
+                    <div class="info-row"><span>LMB Click:</span><span>Create Node</span></div>
+                    <div class="info-row"><span>LMB Drag:</span><span>Create Edge + Node</span></div>
+                    <div class="info-row"><span>RMB Drag:</span><span>Move Node</span></div>
+                    <div class="info-row"><span>Delete:</span><span>Remove Selected</span></div>
+                    <div class="info-row"><span>Click:</span><span>Select Node/Edge</span></div>
+                </div>
+            </div>
+
+            <div class="control-group" id="selection-panel">
+                <h3>Selection Properties</h3>
+                <div id="no-selection">No selection</div>
+                <div id="node-properties" style="display: none;">
+                    <label>Node ID: <span id="node-id"></span></label>
+                    <label>Position: <span id="node-pos"></span></label>
+                    <label>Connections: <span id="node-connections"></span></label>
+                    <button class="btn btn-secondary" onclick="game.testPathfinding()">Test A* Path</button>
+                </div>
+                <div id="edge-properties" style="display: none;">
+                    <label>Edge Type:</label>
+                    <div class="edge-type-selector">
+                        <div class="edge-type-btn walk active" data-type="walk" onclick="game.setEdgeType('walk')">Walk</div>
+                        <div class="edge-type-btn run" data-type="run" onclick="game.setEdgeType('run')">Run</div>
+                        <div class="edge-type-btn ambush" data-type="ambush" onclick="game.setEdgeType('ambush')">Ambush</div>
+                        <div class="edge-type-btn defence" data-type="defence" onclick="game.setEdgeType('defence')">Defence</div>
+                    </div>
+                    
+                    <label>Cost: <span id="cost-value">1.0</span></label>
+                    <input type="range" id="cost-slider" min="0.1" max="10" step="0.1" value="1" 
+                           oninput="game.setEdgeCost(this.value)">
+                    
+                    <label>Speed: <span id="speed-value">1.0</span></label>
+                    <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1"
+                           oninput="game.setEdgeSpeed(this.value)">
+                    
+                    <label>Capacity: <span id="capacity-value">1</span></label>
+                    <input type="number" id="capacity-input" min="1" max="10" value="1"
+                           onchange="game.setEdgeCapacity(this.value)">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Actions</h3>
+                <button class="btn btn-primary" onclick="game.clearGraph()">Clear Graph</button>
+                <button class="btn btn-secondary" onclick="game.spawnUnit()">Spawn Unit</button>
+                <button class="btn btn-secondary" onclick="game.toggleAutoMove()">Toggle Auto Move</button>
+            </div>
+
+            <div class="control-group">
+                <h3>Legend</h3>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #27ae60;"></div>
+                        <span>Walk (normal speed)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e67e22;"></div>
+                        <span>Run (fast, higher cost)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #8e44ad;"></div>
+                        <span>Ambush (slow, tactical)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2980b9;"></div>
+                        <span>Defence (slowest, safest)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div>Nodes: <span id="node-count">0</span></div>
+                <div>Edges: <span id="edge-count">0</span></div>
+                <div>Units: <span id="unit-count">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
